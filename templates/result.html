@@ -25,7 +25,7 @@
             border-radius: 15px;
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
             width: 90%;
-            max-width: 500px;
+            max-width: 900px;
             backdrop-filter: blur(10px);
         }
 
@@ -41,15 +41,22 @@
 
         .image-container {
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
+            flex-wrap: wrap;
             margin-top: 20px;
+        }
+
+        .image-container div {
+            flex: 1;
+            max-width: 45%; /* Limita el tamaño para evitar que se salgan del contenedor */
+            margin-bottom: 20px;
         }
 
         .image-container img {
             border: 2px solid #ddd;
             border-radius: 10px;
-            max-width: 400px;
-            margin-bottom: 20px;
+            width: 100%;  /* Asegura que las imágenes se ajusten al contenedor */
+            height: auto;
             transition: transform 0.3s ease;
         }
 
@@ -92,11 +99,11 @@
         <div class="image-container">
             <div>
                 <h3>Imagen Original:</h3>
-                <img src="{{ original_image }}" alt="Imagen Original">
+                <img src="data:image/jpeg;base64,{{ original_image }}" alt="Imagen Original">
             </div>
             <div>
                 <h3>Imagen con Puntos Faciales:</h3>
-                <img src="{{ processed_image }}" alt="Imagen Procesada">
+                <img src="data:image/jpeg;base64,{{ processed_image }}" alt="Imagen Procesada">
             </div>
         </div>
 

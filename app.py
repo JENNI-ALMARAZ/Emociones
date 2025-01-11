@@ -1,8 +1,3 @@
-# Primero, importa os para configurar el nivel de log
-import os
-# Establece el nivel de log para suprimir advertencias
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0 = todas, 1 = advertencias, 2 = errores
-
 from flask import Flask, render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
 import os

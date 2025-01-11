@@ -4,6 +4,7 @@ deepface
 tensorflow==2.18.0
 tf-keras
 keras
+mediapipe
 numpy
 pandas
 opencv-python-headless

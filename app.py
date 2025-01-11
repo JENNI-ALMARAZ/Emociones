@@ -4,12 +4,11 @@ import os
 import time
 from deepface import DeepFace
 import cv2
+import base64
+import numpy as np
 import mediapipe as mp
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['PROCESSED_FOLDER'] = 'static/processed'
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
 # Diccionario para traducir emociones
 emotion_translation = {
@@ -24,12 +23,11 @@ emotion_translation = {
 
 # Verifica si el archivo es permitido
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg'}
 
 # Función para procesar y dibujar puntos faciales específicos con MediaPipe
-def draw_landmarks_with_mediapipe(image_path):
+def draw_landmarks_with_mediapipe(image):
     mp_face_mesh = mp.solutions.face_mesh
-    image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Inicializar MediaPipe Face Mesh
@@ -57,10 +55,7 @@ def draw_landmarks_with_mediapipe(image_path):
                             # Dibujar el punto
                             cv2.circle(image, (x, y), 5, (0, 255, 0), -1)
 
-    # Guardar la imagen procesada
-    processed_path = os.path.join(app.config['PROCESSED_FOLDER'], os.path.basename(image_path))
-    cv2.imwrite(processed_path, image)
-    return processed_path
+    return image
 
 @app.route('/')
 def index():
@@ -74,9 +69,10 @@ def upload_file():
     if file.filename == '':
         return "No selected file"
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        # Leer la imagen directamente desde el archivo cargado
+        file_bytes = file.read()
+        npimg = np.frombuffer(file_bytes, np.uint8)
+        img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
         try:
             # Simular un retraso para procesamiento
@@ -84,7 +80,7 @@ def upload_file():
 
             # Procesar la imagen usando DeepFace para obtener la emoción
             result = DeepFace.analyze(
-                img_path=filepath,
+                img_path=img,
                 actions=["emotion"],
                 enforce_detection=False
             )
@@ -93,13 +89,22 @@ def upload_file():
             emotion_english = result[0]["dominant_emotion"]
             emotion_spanish = emotion_translation.get(emotion_english, "Emoción desconocida")
 
-            # Procesar puntos faciales con MediaPipe
-            processed_image_path = draw_landmarks_with_mediapipe(filepath)
+            # Convertir la imagen original a base64
+            _, img_encoded_original = cv2.imencode('.jpg', img)
+            original_image_base64 = base64.b64encode(img_encoded_original).decode('utf-8')
+
+            # Procesar puntos faciales con MediaPipe en una copia de la imagen
+            img_with_landmarks = img.copy()  # Copiar la imagen para no modificar la original
+            processed_image = draw_landmarks_with_mediapipe(img_with_landmarks)
+
+            # Convertir la imagen procesada (con puntos faciales) a base64
+            _, img_encoded_processed = cv2.imencode('.jpg', processed_image)
+            processed_image_base64 = base64.b64encode(img_encoded_processed).decode('utf-8')
 
             return render_template(
                 'result.html',
-                original_image=filepath,
-                processed_image=processed_image_path,
+                original_image=original_image_base64,
+                processed_image=processed_image_base64,
                 emotion=emotion_spanish
             )
         except Exception as e:
@@ -107,7 +112,4 @@ def upload_file():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Crear carpetas si no existen
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
     app.run(debug=True)

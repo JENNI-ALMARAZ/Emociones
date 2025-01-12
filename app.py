@@ -7,6 +7,8 @@ import cv2
 import base64
 import numpy as np
 import mediapipe as mp
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
@@ -25,6 +27,19 @@ emotion_translation = {
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg'}
 
+# Función para redimensionar imágenes grandes
+def resize_image(image, max_width=800, max_height=800):
+    """
+    Redimensiona una imagen para que no exceda el tamaño máximo permitido.
+    """
+    height, width = image.shape[:2]
+    if width > max_width or height > max_height:
+        scale = min(max_width / width, max_height / height)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
+    return image
+
 # Función para procesar y dibujar puntos faciales específicos con MediaPipe
 def draw_landmarks_with_mediapipe(image):
     mp_face_mesh = mp.solutions.face_mesh
@@ -38,22 +53,19 @@ def draw_landmarks_with_mediapipe(image):
             for face_landmarks in results.multi_face_landmarks:
                 # Índices refinados para ojos, cejas, boca y nariz
                 specific_indices = {
-                    "Cejas izquierda": [65, 55, 52, 46],  # izquierdo 
-                    "Cejas derecha": [295, 285, 282, 276],  #derecho 
-                    "Ojo derecho": [33, 133, 159, 145],  # 4 puntos en el ojo derecho
-                    "Ojo izquierdo": [263, 362, 386, 374],   # 4 puntos en el ojo izquierdo
-                    "Boca": [61, 291, 13, 14],  # Extremos, labio superior e inferior
+                    "Cejas izquierda": [65, 55, 52, 46],
+                    "Cejas derecha": [295, 285, 282, 276],
+                    "Ojo derecho": [33, 133, 159, 145],
+                    "Ojo izquierdo": [263, 362, 386, 374],
+                    "Boca": [61, 291, 13, 14],
                     "Nariz": [1]
                 }
 
-                # Dibujar puntos y mostrar coordenadas
-                for feature, indices in specific_indices.items():
+                for indices in specific_indices.values():
                     for idx in indices:
                         if idx < len(face_landmarks.landmark):
                             x = int(face_landmarks.landmark[idx].x * image.shape[1])
                             y = int(face_landmarks.landmark[idx].y * image.shape[0])
-
-                            # Dibujar el punto
                             cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
 
     return image
@@ -75,8 +87,10 @@ def upload_file():
         npimg = np.frombuffer(file_bytes, np.uint8)
         img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
+        # Redimensionar la imagen si es necesario
+        img = resize_image(img)
+
         try:
-            # Simular un retraso para procesamiento
             time.sleep(2)
 
             # Procesar la imagen usando DeepFace para obtener la emoción
@@ -94,12 +108,11 @@ def upload_file():
             _, img_encoded_original = cv2.imencode('.jpg', img)
             original_image_base64 = base64.b64encode(img_encoded_original).decode('utf-8')
 
-            # Procesar puntos faciales con MediaPipe en una copia de la imagen
-            img_with_landmarks = img.copy()  # Copiar la imagen para no modificar la original
-            processed_image = draw_landmarks_with_mediapipe(img_with_landmarks)
+            # Procesar puntos faciales con MediaPipe
+            img_with_landmarks = draw_landmarks_with_mediapipe(img.copy())
 
             # Convertir la imagen procesada (con puntos faciales) a base64
-            _, img_encoded_processed = cv2.imencode('.jpg', processed_image)
+            _, img_encoded_processed = cv2.imencode('.jpg', img_with_landmarks)
             processed_image_base64 = base64.b64encode(img_encoded_processed).decode('utf-8')
 
             return render_template(

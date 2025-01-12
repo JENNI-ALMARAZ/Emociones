@@ -38,9 +38,10 @@ def draw_landmarks_with_mediapipe(image):
             for face_landmarks in results.multi_face_landmarks:
                 # Índices refinados para ojos, cejas, boca y nariz
                 specific_indices = {
-                    "Cejas": [70, 107, 336],
-                    "Ojo derecho": [33, 133],
-                    "Ojo izquierdo": [263, 362],
+                    "Cejas izquierda": [65, 55, 52, 46],  # izquierdo 
+                    "Cejas derecha": [295, 285, 282, 276],  #derecho 
+                    "Ojo derecho": [33, 133, 159, 145],  # 4 puntos en el ojo derecho
+                    "Ojo izquierdo": [263, 362, 386, 374],   # 4 puntos en el ojo izquierdo
                     "Boca": [61, 291, 13, 14],  # Extremos, labio superior e inferior
                     "Nariz": [1]
                 }
@@ -53,7 +54,7 @@ def draw_landmarks_with_mediapipe(image):
                             y = int(face_landmarks.landmark[idx].y * image.shape[0])
 
                             # Dibujar el punto
-                            cv2.circle(image, (x, y), 5, (0, 255, 0), -1)
+                            cv2.circle(image, (x, y), 2, (0, 255, 0), -1)
 
     return image
 

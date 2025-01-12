@@ -41,7 +41,7 @@ def draw_landmarks_with_mediapipe(image):
                     "Cejas": [70, 107, 336],
                     "Ojo derecho": [33, 133],
                     "Ojo izquierdo": [263, 362],
-                    "Boca": [78, 308, 61, 291],  # Extremos, labio superior e inferior
+                    "Boca": [61, 291, 13, 14],  # Extremos, labio superior e inferior
                     "Nariz": [1]
                 }
 
